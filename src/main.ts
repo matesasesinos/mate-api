@@ -5,6 +5,10 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
 import { HttpExceptionFilter } from './filters/http-exception.filter';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { ErrorInterceptor } from './common/interceptors/error.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -12,18 +16,47 @@ async function bootstrap() {
   });
   const configService = app.get(ConfigService);
   
-  // Set global prefix
-  app.setGlobalPrefix('api');
+  // Enable CORS
+  app.enableCors({
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'api-x-key'],
+    credentials: true,
+    maxAge: 3600,
+  });
+
+  // Security middleware
+  app.use(helmet());
+
+  // Rate limiting
+  app.use(
+    rateLimit({
+      windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '900000'), // 15 minutes
+      max: parseInt(process.env.RATE_LIMIT_MAX ?? '100'), // limit each IP to 100 requests per windowMs
+      message: 'Too many requests from this IP, please try again later',
+    }),
+  );
 
   // Global pipes
-  app.useGlobalPipes(new ValidationPipe({
-    transform: true,
-    whitelist: true,
-    forbidNonWhitelisted: true,
-  }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true, // Strip properties that don't have decorators
+      forbidNonWhitelisted: true, // Throw errors if non-whitelisted properties are present
+      transform: true, // Transform payloads to DTO instances
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+    }),
+  );
 
   // Global interceptors
-  app.useGlobalInterceptors(new TransformInterceptor());
+  app.useGlobalInterceptors(
+    new LoggingInterceptor(),
+    new ErrorInterceptor(),
+  );
+
+  // Global prefix
+  app.setGlobalPrefix('api');
 
   // Global filters
   app.useGlobalFilters(new HttpExceptionFilter());

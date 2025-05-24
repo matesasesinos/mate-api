@@ -10,6 +10,7 @@ API RESTful para gestión de usuarios con autenticación y autorización basada 
 - Integración con Google y Facebook OAuth
 - Recuperación y cambio de contraseña
 - Documentación con Swagger
+- Medidas de seguridad robustas
 
 ## Requisitos
 
@@ -51,6 +52,16 @@ API_KEY=tu_api_key_secreta
 
 # JWT
 JWT_SECRET=tu_jwt_secret_secreto
+JWT_EXPIRATION=6h
+REFRESH_TOKEN_EXPIRATION=7d
+
+# Seguridad
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX=100
+PASSWORD_SALT_ROUNDS=12
+MAX_LOGIN_ATTEMPTS=5
+LOGIN_ATTEMPT_WINDOW_MS=900000
 
 # OAuth
 GOOGLE_CLIENT_ID=tu_google_client_id
@@ -96,56 +107,67 @@ Authorization: Bearer tu_jwt_token
 - `delete:user`: Eliminar usuarios
 - Y más...
 
-### Ejemplos de Uso
+### Gestión de Roles
 
-1. Login para obtener JWT token:
+#### Asignar Roles a Usuario
 ```http
-POST /api/auth/login
+POST /api/users/:id/roles
 Content-Type: application/json
-
-{
-    "email": "usuario@ejemplo.com",
-    "password": "contraseña"
-}
-```
-
-2. Acceder a endpoint protegido:
-```http
-GET /api/users
 api-x-key: tu_api_key
 Authorization: Bearer tu_jwt_token
-```
-
-3. Endpoint público (solo requiere API Key):
-```http
-GET /api/posts
-api-x-key: tu_api_key
-```
-
-## Instalación Inicial
-
-Antes de usar la API, es necesario realizar la instalación inicial:
-
-1. Verificar si la aplicación está instalada:
-```http
-GET /api/install
-```
-
-2. Si no está instalada, crear usuario administrador:
-```http
-POST /api/install
-Content-Type: application/json
 
 {
-    "adminEmail": "admin@ejemplo.com",
-    "adminPassword": "contraseña_segura"
+    "roleIds": [1, 2]  // Array de IDs de roles a asignar
 }
 ```
 
-Esto creará:
-- Permisos necesarios
-- Roles predefinidos
-- Usuario administrador
+#### Quitar Roles a Usuario
+```http
+DELETE /api/users/:id/roles
+Content-Type: application/json
+api-x-key: tu_api_key
+Authorization: Bearer tu_jwt_token
+
+{
+    "roleIds": [1, 2]  // Array de IDs de roles a quitar
+}
+```
+
+## Medidas de Seguridad
+
+### CORS
+- Orígenes permitidos configurables
+- Métodos HTTP permitidos
+- Headers permitidos
+- Credenciales habilitadas
+- Tiempo de caché configurable
+
+### Rate Limiting
+- Límite de peticiones por IP
+- Ventana de tiempo configurable
+- Mensaje personalizado
+
+### Headers de Seguridad (Helmet)
+- Protección contra XSS
+- Prevención de clickjacking
+- Control de MIME types
+- Deshabilitación de X-Powered-By
+
+### Validación y Sanitización
+- Whitelist de propiedades
+- Transformación automática
+- Rechazo de propiedades no permitidas
+
+### Logging y Monitoreo
+- Registro detallado de peticiones
+- Información de usuario y contexto
+- Tiempo de respuesta
+- Errores estructurados
+
+### Manejo de Errores
+- Mensajes de error seguros en producción
+- Logging de errores para debugging
+- Respuestas consistentes
 
 ## Documentación API
 
@@ -171,21 +193,14 @@ http://localhost:3000/docs
 - `PATCH /api/users/:id`: Actualizar usuario (admin)
 - `DELETE /api/users/:id`: Eliminar usuario (admin)
 - `GET /api/users/profile`: Ver perfil propio
+- `POST /api/users/:id/roles`: Asignar roles a usuario (admin)
+- `DELETE /api/users/:id/roles`: Quitar roles a usuario (admin)
 
 ### Roles y Permisos
 - `GET /api/roles`: Listar roles (admin)
 - `POST /api/roles`: Crear rol (admin)
 - `GET /api/permissions`: Listar permisos (admin)
 - `POST /api/permissions`: Crear permiso (admin)
-
-## Seguridad
-
-- Todas las contraseñas se almacenan hasheadas con Argon2
-- Los tokens JWT expiran en 6 horas
-- Se requiere API Key para todos los endpoints
-- Los endpoints protegidos requieren JWT token válido
-- Validación de roles y permisos en cada endpoint
-- Protección contra ataques comunes (XSS, CSRF, etc.)
 
 ## Desarrollo
 

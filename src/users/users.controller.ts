@@ -108,7 +108,17 @@ export class UsersController {
             type: 'object',
             properties: {
               id: { type: 'number' },
-              name: { type: 'string' }
+              name: { type: 'string' },
+              permissions: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'number' },
+                    name: { type: 'string' }
+                  }
+                }
+              }
             }
           }
         }
@@ -143,7 +153,17 @@ export class UsersController {
             type: 'object',
             properties: {
               id: { type: 'number' },
-              name: { type: 'string' }
+              name: { type: 'string' },
+              permissions: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'number' },
+                    name: { type: 'string' }
+                  }
+                }
+              }
             }
           }
         }
