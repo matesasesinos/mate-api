@@ -6,12 +6,17 @@ import { EncryptionHelper } from '../utils/encryption.helper';
 import { PaginationDto, OrderDirection } from '../common/dto/pagination.dto';
 import { PaginationHelper, PaginatedResponse } from '../utils/pagination.helper';
 import { ConfigService } from '@nestjs/config';
+import { Role } from './entities/role.entity';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @InjectRepository(Role)
+    private rolesRepository: Repository<Role>,
     private configService: ConfigService,
   ) {}
 
@@ -107,5 +112,32 @@ export class UsersService {
     }
 
     return user;
+  }
+
+  async assignRoles(userId: number, roleIds: number[]): Promise<User> {
+    const user = await this.findOne(userId);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const roles = await this.rolesRepository.findByIds(roleIds);
+    if (roles.length !== roleIds.length) {
+      throw new NotFoundException('One or more roles not found');
+    }
+
+    user.roles = roles;
+    return this.usersRepository.save(user);
+  }
+
+  async removeRoles(userId: number, roleIds: number[]): Promise<User> {
+    const user = await this.findOne(userId);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    // Filter out the roles that need to be removed
+    user.roles = user.roles.filter(role => !roleIds.includes(role.id));
+    
+    return this.usersRepository.save(user);
   }
 } 

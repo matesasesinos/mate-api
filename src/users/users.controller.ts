@@ -3,6 +3,8 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiHeader } from '@n
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { AssignRolesDto } from './dto/assign-roles.dto';
+import { RemoveRolesDto } from './dto/remove-roles.dto';
 import { CombinedAuthGuard } from '../auth/guards/combined-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -84,5 +86,75 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'User not found' })
   remove(@Param('id') id: string) {
     return this.usersService.remove(+id);
+  }
+
+  @Post(':id/roles')
+  @Permissions('update:user')
+  @ApiOperation({ 
+    summary: 'Assign roles to a user',
+    description: 'Assigns one or more roles to a specific user. Requires admin role and update:user permission.'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Roles assigned successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number' },
+        email: { type: 'string' },
+        roles: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'number' },
+              name: { type: 'string' }
+            }
+          }
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: 'Bad request - Invalid role IDs' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  assignRoles(@Param('id') id: string, @Body() assignRolesDto: AssignRolesDto) {
+    return this.usersService.assignRoles(+id, assignRolesDto.roleIds);
+  }
+
+  @Delete(':id/roles')
+  @Permissions('update:user')
+  @ApiOperation({ 
+    summary: 'Remove roles from a user',
+    description: 'Removes one or more roles from a specific user. Requires admin role and update:user permission.'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Roles removed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number' },
+        email: { type: 'string' },
+        roles: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'number' },
+              name: { type: 'string' }
+            }
+          }
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: 'Bad request - Invalid role IDs' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  removeRoles(@Param('id') id: string, @Body() removeRolesDto: RemoveRolesDto) {
+    return this.usersService.removeRoles(+id, removeRolesDto.roleIds);
   }
 } 
