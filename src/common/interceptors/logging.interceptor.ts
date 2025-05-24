@@ -2,9 +2,16 @@ import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nes
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 
-@Injectable()
+@Injectable() //solo para ambientes de desarrollo o staging
 export class LoggingInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    const isProduction = process.env.NODE_ENV === 'production'; 
+    
+    // Si es producción, solo pasar la request sin logging
+    if (isProduction) {
+      return next.handle();
+    }
+
     const request = context.switchToHttp().getRequest();
     const { ip, method, path: url } = request;
     const userAgent = request.get('user-agent') || '';
@@ -27,6 +34,7 @@ export class LoggingInterceptor implements NestInterceptor {
           ip,
           userId,
           responseTime: Date.now() - now,
+          environment: process.env.NODE_ENV,
         });
       }),
     );
