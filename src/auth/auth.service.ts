@@ -14,26 +14,44 @@ export class AuthService {
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
-    const user = await this.usersService.findByEmail(email);
+    const user = await this.usersService.validateUser(email, password);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
-
-    const isPasswordValid = await EncryptionHelper.verify(password, user.password);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    const { password: _, ...result } = user;
-    return result;
+    return user;
   }
 
-  async login(user: any) {
-    const payload = { email: user.email, sub: user.id };
+  async login(user: User) {
+    const payload = {
+      email: user.email,
+      sub: user.id,
+      roles: user.roles.map(role => role.name),
+      permissions: user.roles.flatMap(role => 
+        role.permissions.map(permission => permission.name)
+      ),
+    };
+
     return {
       access_token: this.jwtService.sign(payload),
-      user,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        roles: user.roles.map(role => role.name),
+        permissions: user.roles.flatMap(role => 
+          role.permissions.map(permission => permission.name)
+        ),
+      },
     };
+  }
+
+  async verifyToken(token: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync(token);
+      return payload;
+    } catch (error) {
+      throw new UnauthorizedException('Invalid token');
+    }
   }
 
   async googleLogin(req: any) {

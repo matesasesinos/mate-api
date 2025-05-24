@@ -1,5 +1,6 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, ManyToMany, JoinTable } from 'typeorm';
 import { UserProfile } from './user-profile.entity';
+import { Role } from './role.entity';
 
 @Entity('users')
 export class User {
@@ -18,12 +19,29 @@ export class User {
   @Column()
   lastname: string;
 
-  @OneToOne(() => UserProfile, profile => profile.user)
+  @Column({ nullable: true })
+  avatar: string;
+
+  @Column({ default: true })
+  isActive: boolean;
+
+  @OneToOne(() => UserProfile, profile => profile.user, {
+    cascade: true,
+  })
+  @JoinColumn()
   profile: UserProfile;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @ManyToMany(() => Role, role => role.users)
+  @JoinTable({
+    name: 'user_roles',
+    joinColumn: { name: 'user_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'role_id', referencedColumnName: 'id' },
+  })
+  roles: Role[];
+
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP', onUpdate: 'CURRENT_TIMESTAMP' })
   updatedAt: Date;
 } 

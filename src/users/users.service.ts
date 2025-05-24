@@ -46,14 +46,19 @@ export class UsersService {
       baseUrl: `${baseUrl}/api/users`,
       orderBy: 'createdAt',
       defaultOrder: OrderDirection.DESC,
-      relations: { profile: true },
+      relations: {
+        profile: true,
+        roles: {
+          permissions: true
+        }
+      },
     });
   }
 
   async findOne(id: number): Promise<User> {
     const user = await this.usersRepository.findOne({
       where: { id },
-      relations: ['profile'],
+      relations: ['profile', 'roles', 'roles.permissions'],
     });
     
     if (!user) {
@@ -66,7 +71,7 @@ export class UsersService {
   async findByEmail(email: string): Promise<User> {
     const user = await this.usersRepository.findOne({
       where: { email },
-      relations: ['profile'],
+      relations: ['profile', 'roles', 'roles.permissions'],
     });
     
     if (!user) {

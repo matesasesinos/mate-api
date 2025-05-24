@@ -26,7 +26,8 @@ http://localhost:3000/api/docs
 
 ## Características
 
-- Autenticación mediante API Key
+- Autenticación mediante JWT y OAuth (Google, Facebook)
+- Sistema de roles y permisos
 - Paginación en todos los endpoints de listado
 - Respuestas estandarizadas
 - Documentación completa con Swagger
@@ -52,6 +53,117 @@ La respuesta incluye:
 - `next`: URL de la siguiente página (false si no hay)
 - `previous`: URL de la página anterior (false si no hay)
 
+## Sistema de Roles y Permisos
+
+### Roles Predefinidos
+
+1. **admin**
+   - Acceso total al sistema
+   - Puede gestionar usuarios, roles y permisos
+   - Puede realizar todas las operaciones CRUD
+
+2. **moderator**
+   - Puede ver todos los usuarios
+   - Puede moderar contenido
+   - No puede eliminar usuarios
+
+3. **user**
+   - Acceso básico
+   - Puede ver y editar su propio perfil
+   - Acceso limitado a recursos
+
+### Permisos
+
+Los permisos siguen el formato `acción:recurso`. Ejemplos:
+
+- `create:user` - Crear usuarios
+- `read:users` - Ver lista de usuarios
+- `read:user` - Ver un usuario específico
+- `update:user` - Actualizar usuarios
+- `delete:user` - Eliminar usuarios
+- `create:post` - Crear posts
+- `read:posts` - Ver lista de posts
+- `read:post` - Ver un post específico
+- `update:post` - Actualizar posts
+- `delete:post` - Eliminar posts
+
+### Uso de Roles y Permisos
+
+Para proteger un endpoint, usa los decoradores `@Roles()` y `@Permissions()`:
+
+```typescript
+@UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+@Roles('admin', 'moderator')
+@Permissions('read:users')
+@Get()
+findAll() {
+  // ...
+}
+```
+
+### Endpoints Protegidos
+
+#### Usuarios
+- `GET /api/users` - Solo admin y moderadores
+- `POST /api/users` - Solo admin
+- `GET /api/users/:id` - Solo admin y moderadores
+- `PATCH /api/users/:id` - Solo admin
+- `DELETE /api/users/:id` - Solo admin
+- `GET /api/users/profile` - Usuario autenticado
+- `PATCH /api/users/profile` - Usuario autenticado
+
+#### Posts (Ejemplo)
+- `GET /api/posts` - Público
+- `GET /api/posts/:id` - Público
+- `POST /api/posts` - Solo admin y moderadores
+- `PATCH /api/posts/:id` - Solo admin y moderadores
+- `DELETE /api/posts/:id` - Solo admin y moderadores
+
+### Gestión de Roles y Permisos
+
+Para gestionar roles y permisos, usa los siguientes endpoints:
+
+```http
+# Roles
+GET    /api/roles          # Listar roles
+POST   /api/roles          # Crear rol
+GET    /api/roles/:id      # Ver rol
+PATCH  /api/roles/:id      # Actualizar rol
+DELETE /api/roles/:id      # Eliminar rol
+
+# Permisos
+GET    /api/permissions    # Listar permisos
+POST   /api/permissions    # Crear permiso
+GET    /api/permissions/:id # Ver permiso
+PATCH  /api/permissions/:id # Actualizar permiso
+DELETE /api/permissions/:id # Eliminar permiso
+```
+
+### Asignación de Roles
+
+Para asignar roles a un usuario:
+
+```http
+POST /api/users/:id/roles
+Content-Type: application/json
+
+{
+  "roleIds": [1, 2]  // IDs de los roles a asignar
+}
+```
+
+### Asignación de Permisos
+
+Para asignar permisos a un rol:
+
+```http
+POST /api/roles/:id/permissions
+Content-Type: application/json
+
+{
+  "permissionIds": [1, 2]  // IDs de los permisos a asignar
+}
+```
 
 ## Configuración
 
@@ -130,7 +242,8 @@ Respuesta:
       "id": 1,
       "email": "user@example.com",
       "name": "John",
-      "lastname": "Doe"
+      "lastname": "Doe",
+      "roles": ["user"]
     }
   }
 }
@@ -226,6 +339,10 @@ Authorization: Bearer your-jwt-token
 - Los tokens de recuperación de contraseña expiran después de 1 hora
 - Las credenciales de OAuth se manejan de forma segura
 - No se revela información sobre la existencia de usuarios en endpoints de recuperación de contraseña
+- Sistema de roles y permisos para control de acceso granular
+- Validación de permisos en el backend
+- Logging de accesos denegados
+- Protección contra ataques comunes
 
 ## Ejecución
 
@@ -244,7 +361,11 @@ $ npm run start:prod
 
 ```
 src/
-├── common/           # Código compartido (DTOs, interfaces, etc.)
+├── auth/              # Módulo de autenticación
+├── common/           # Código compartido
+│   ├── decorators/   # Decoradores personalizados
+│   ├── guards/       # Guards de autenticación y autorización
+│   └── dto/          # DTOs comunes
 ├── config/           # Configuración de la aplicación
 ├── filters/          # Filtros de excepciones
 ├── interceptors/     # Interceptores

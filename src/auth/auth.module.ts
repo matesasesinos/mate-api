@@ -9,6 +9,7 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { FacebookStrategy } from './strategies/facebook.strategy';
+import { CombinedAuthGuard } from './guards/combined-auth.guard';
 
 @Module({
   imports: [
@@ -18,7 +19,11 @@ import { FacebookStrategy } from './strategies/facebook.strategy';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '1d' },
+        signOptions: { 
+          expiresIn: '6h',
+          issuer: 'api-users',
+          audience: 'api-users-client'
+        },
       }),
       inject: [ConfigService],
     }),
@@ -29,8 +34,9 @@ import { FacebookStrategy } from './strategies/facebook.strategy';
     JwtStrategy,
     GoogleStrategy,
     FacebookStrategy,
+    CombinedAuthGuard,
   ],
   controllers: [AuthController],
-  exports: [AuthService],
+  exports: [AuthService, CombinedAuthGuard],
 })
 export class AuthModule {} 

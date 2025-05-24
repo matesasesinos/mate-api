@@ -1,27 +1,32 @@
-import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { databaseConfig } from './config/database.config';
 import { UsersModule } from './users/users.module';
-import { ApiKeyMiddleware } from './middleware/api-key.middleware';
-import configuration from './config/configuration';
+import { AuthModule } from './auth/auth.module';
+import { CommonModule } from './common/common.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [configuration],
     }),
-    TypeOrmModule.forRoot(databaseConfig),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        type: 'mysql',
+        host: configService.get('DB_HOST', 'localhost'),
+        port: configService.get('DB_PORT', 3306),
+        username: configService.get('DB_USERNAME', 'root'),
+        password: configService.get('DB_PASSWORD', ''),
+        database: configService.get('DB_DATABASE', 'api_users'),
+        autoLoadEntities: true,
+        synchronize: configService.get('NODE_ENV') !== 'production',
+      }),
+      inject: [ConfigService],
+    }),
     UsersModule,
+    AuthModule,
+    CommonModule,
   ],
-  controllers: [],
-  providers: [],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(ApiKeyMiddleware)
-      .forRoutes('*');
-  }
-}
+export class AppModule {}
