@@ -55,6 +55,8 @@ La respuesta incluye:
 
 ## Configuración
 
+### Variables de Entorno
+
 Crea un archivo `.env` en la raíz del proyecto con las siguientes variables:
 
 ```env
@@ -63,15 +65,167 @@ DB_HOST=localhost
 DB_PORT=3306
 DB_USERNAME=root
 DB_PASSWORD=root
-DB_DATABASE=mate_api
-DB_SYNCHRONIZE=true #solo desarrollo, para producción debe ser false
+DB_DATABASE=api_users_test
 
 # API
-BASE_URL=http://localhost:3000 # importante ya que sin esto fallan muchas cosas
-APP_ENVIRONMENT=local #local, staging, production, etc
 PORT=3000
-API_KEY=your-api-key-here
+BASE_URL=http://localhost:3000
+
+# JWT
+JWT_SECRET=your-super-secret-key-here
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# Facebook OAuth
+FACEBOOK_CLIENT_ID=your-facebook-client-id
+FACEBOOK_CLIENT_SECRET=your-facebook-client-secret
 ```
+
+### Configuración de OAuth
+
+#### Google OAuth
+1. Ve a [Google Cloud Console](https://console.cloud.google.com)
+2. Crea un nuevo proyecto
+3. Habilita la API de Google+ API
+4. En "Credentials", crea un nuevo "OAuth 2.0 Client ID"
+5. Configura las URLs de redirección autorizadas:
+   - `http://localhost:3000/api/auth/google/callback` (desarrollo)
+   - `https://tu-dominio.com/api/auth/google/callback` (producción)
+6. Copia el Client ID y Client Secret a tu archivo `.env`
+
+#### Facebook OAuth
+1. Ve a [Facebook Developers](https://developers.facebook.com)
+2. Crea una nueva aplicación
+3. En la configuración de la app, agrega el producto "Facebook Login"
+4. Configura las URLs de redirección OAuth:
+   - `http://localhost:3000/api/auth/facebook/callback` (desarrollo)
+   - `https://tu-dominio.com/api/auth/facebook/callback` (producción)
+5. Copia el App ID y App Secret a tu archivo `.env`
+
+## Autenticación
+
+La API soporta múltiples métodos de autenticación:
+
+### 1. Autenticación Local (Email/Password)
+
+```http
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+```
+
+Respuesta:
+```json
+{
+  "success": true,
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIs...",
+    "user": {
+      "id": 1,
+      "email": "user@example.com",
+      "name": "John",
+      "lastname": "Doe"
+    }
+  }
+}
+```
+
+### 2. Autenticación con Google
+
+1. Redirige al usuario a:
+```
+GET /api/auth/google
+```
+
+2. El usuario será redirigido a Google para autenticarse
+3. Después de la autenticación, Google redirigirá a:
+```
+GET /api/auth/google/callback
+```
+
+### 3. Autenticación con Facebook
+
+1. Redirige al usuario a:
+```
+GET /api/auth/facebook
+```
+
+2. El usuario será redirigido a Facebook para autenticarse
+3. Después de la autenticación, Facebook redirigirá a:
+```
+GET /api/auth/facebook/callback
+```
+
+### 4. Recuperación de Contraseña
+
+1. Solicitar reset:
+```http
+POST /api/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+```
+
+2. Resetear contraseña:
+```http
+POST /api/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "reset-token-from-email",
+  "newPassword": "newpassword123"
+}
+```
+
+### 5. Cambio de Contraseña
+
+```http
+POST /api/auth/change-password
+Authorization: Bearer your-jwt-token
+Content-Type: application/json
+
+{
+  "currentPassword": "oldpassword",
+  "newPassword": "newpassword123"
+}
+```
+
+### Protección de Endpoints
+
+Para proteger un endpoint, usa el decorador `@UseGuards(JwtAuthGuard)`:
+
+```typescript
+@UseGuards(JwtAuthGuard)
+@Get('profile')
+getProfile(@Request() req) {
+  return req.user;
+}
+```
+
+### Uso del Token
+
+Para acceder a endpoints protegidos, incluye el token JWT en el header:
+
+```http
+GET /api/users
+Authorization: Bearer your-jwt-token
+```
+
+## Seguridad
+
+- Las contraseñas se almacenan usando Argon2 con configuración de alta seguridad
+- Los tokens JWT expiran después de 24 horas
+- Los tokens de recuperación de contraseña expiran después de 1 hora
+- Las credenciales de OAuth se manejan de forma segura
+- No se revela información sobre la existencia de usuarios en endpoints de recuperación de contraseña
 
 ## Ejecución
 
